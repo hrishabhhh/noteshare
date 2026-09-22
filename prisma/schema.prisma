@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ShareType {
+  ONE_TIME
+  TIME_BASED
+}
+
+enum AccessType {
+  PUBLIC
+  PASSWORD
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique @db.VarChar(254)
+  passwordHash String
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  sessions Session[]
+  notes    Note[]
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  tokenHash String   @unique @db.VarChar(64)
+  userId    String   @db.Uuid
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Note {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerId   String   @db.Uuid
+  title     String   @db.VarChar(200)
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  owner     User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  shareLink ShareLink?
+
+  @@index([ownerId, createdAt])
+}
+
+model ShareLink {
+  id            String     @id @default(uuid()) @db.Uuid
+  noteId        String     @unique @db.Uuid
+  tokenHash     String     @unique @db.VarChar(64)
+  accessKeyHash String?    @db.VarChar(64)
+  shareType     ShareType
+  accessType    AccessType
+  expiresAt     DateTime   @db.Timestamptz(3)
+  consumedAt    DateTime?  @db.Timestamptz(3)
+  revokedAt     DateTime?  @db.Timestamptz(3)
+  viewCount     Int        @default(0)
+  createdAt     DateTime   @default(now()) @db.Timestamptz(3)
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+}
+
+model RateLimit {
+  key     String   @id @db.VarChar(64)
+  hits    Int
+  resetAt DateTime @db.Timestamptz(3)
+
+  @@index([resetAt])
+}
+
+
