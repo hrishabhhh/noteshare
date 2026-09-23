@@ -111,7 +111,13 @@ app.onError((error, c) => {
     );
   }
 
-  console.error("API request failed:", error);
+  console.error("API request failed", {
+    method: c.req.method,
+    path: c.req.path,
+    name: error.name,
+    message: error.message,
+    cause: error.cause instanceof Error ? error.cause.message : undefined,
+  });
   return c.json(
     {
       success: false,
